@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI CV Sorter</title>
+  <style>
+    :root {
+      --bg: #f4f7f3;
+      --panel: #ffffff;
+      --panel-alt: #f8fbf8;
+      --text: #18201b;
+      --muted: #66736b;
+      --border: #d8e2da;
+      --border-strong: #b7c9bb;
+      --accent: #226c45;
+      --accent-soft: #e7f5ec;
+      --success: #1f7a4d;
+      --warning: #ba6a11;
+      --warning-soft: #fff1df;
+      --shadow: 0 18px 40px rgba(29, 49, 35, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34, 108, 69, 0.12), transparent 26%),
+        linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar,
+    .results {
+      padding: 28px;
+    }
+
+    .sidebar {
+      border-right: 1px solid rgba(183, 201, 187, 0.65);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 28px;
+      line-height: 1.05;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .field {
+      margin-top: 22px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 190px;
+      resize: vertical;
+      padding: 14px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      line-height: 1.45;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea:focus,
+    .upload-zone.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(34, 108, 69, 0.12);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chips.hidden {
+      display: none;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .chip:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    .upload-zone {
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      padding: 18px 16px;
+      background: var(--panel-alt);
+      text-align: center;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      cursor: pointer;
+    }
+
+    .upload-zone p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .upload-zone strong {
+      color: var(--text);
+    }
+
+    .upload-meta {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .file-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      max-width: 100%;
+    }
+
+    .file-pill span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 185px;
+    }
+
+    .file-pill button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .primary-btn {
+      width: 100%;
+      margin-top: 22px;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status.error {
+      color: #b42318;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .results h2 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .results-subtext {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .placeholder,
+    .loading-state {
+      display: grid;
+      place-items: center;
+      min-height: calc(100vh - 112px);
+      border: 1px dashed var(--border);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .placeholder-card {
+      max-width: 420px;
+    }
+
+    .placeholder h3,
+    .loading-state h3 {
+      margin: 14px 0 8px;
+      font-size: 22px;
+    }
+
+    .placeholder p,
+    .loading-state p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .stack-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(34, 108, 69, 0.18), rgba(34, 108, 69, 0.05));
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      color: var(--accent);
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .dot-loader {
+      display: inline-flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .dot-loader span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1s infinite ease-in-out;
+    }
+
+    .dot-loader span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .dot-loader span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% {
+        opacity: 0.35;
+        transform: translateY(0);
+      }
+      40% {
+        opacity: 1;
+        transform: translateY(-4px);
+      }
+    }
+
+    .cards {
+      display: grid;
+      gap: 16px;
+    }
+
+    .candidate-card {
+      position: relative;
+      padding: 18px;
+      border-radius: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .candidate-card.top {
+      border-color: var(--success);
+      box-shadow: 0 18px 40px rgba(31, 122, 77, 0.12);
+    }
+
+    .badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e8f7ee;
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .candidate-meta {
+      display: flex;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .rank-chip,
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      font-weight: 800;
+    }
+
+    .rank-chip {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .avatar {
+      background: #edf2ec;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .candidate-name {
+      margin: 2px 0 4px;
+      font-size: 18px;
+    }
+
+    .candidate-file {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    .score-wrap {
+      min-width: 108px;
+      text-align: right;
+    }
+
+    .score-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .score-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-bar {
+      overflow: hidden;
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: #e8efea;
+      margin: 10px 0 16px;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #8ec5a0, #226c45);
+    }
+
+    .tag-group {
+      margin-bottom: 14px;
+    }
+
+    .tag-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag.match {
+      color: var(--success);
+      background: #eaf7ef;
+    }
+
+    .tag.gap {
+      color: var(--warning);
+      background: var(--warning-soft);
+    }
+
+    .summary {
+      margin: 0;
+      color: #34423a;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid rgba(183, 201, 187, 0.65);
+      }
+
+      .placeholder,
+      .loading-state {
+        min-height: 320px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar,
+      .results {
+        padding: 20px;
+      }
+
+      .card-header {
+        flex-direction: column;
+      }
+
+      .score-wrap {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="eyebrow">AI Screening Workspace</div>
+        <h1>AI CV Sorter</h1>
+        <p class="lede">Paste a role brief, upload candidate CVs, and let Claude create a ranked shortlist with recruiter-style summaries.</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="jobDescription">Job description</label>
+        <textarea
+          id="jobDescription"
+          placeholder="Paste the full job description here..."
+          onfocus="handleJobDescriptionFocus()"
+          oninput="handleJobDescriptionInput()"
+        ></textarea>
+        <div id="quickChips" class="chips hidden"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Candidate CV files</span>
+        <div
+          id="uploadZone"
+          class="upload-zone"
+          onclick="triggerFilePicker()"
+          ondragenter="handleDragEnter(event)"
+          ondragover="handleDragOver(event)"
+          ondragleave="handleDragLeave(event)"
+          ondrop="handleDrop(event)"
+        >
+          <p><strong>Drop PDF, DOCX, or TXT files</strong><br>or click to browse multiple CVs</p>
+          <div class="upload-meta">Files are used for their filenames in the AI ranking prompt.</div>
+        </div>
+        <input id="fileInput" type="file" accept=".pdf,.docx,.txt" multiple onchange="handleFileSelection(event)">
+        <div id="fileList" class="file-list"></div>
+      </div>
+
+      <button id="rankButton" class="primary-btn" onclick="rankCandidates()" disabled>Rank candidates</button>
+      <div id="statusMessage" class="status"></div>
+    </aside>
+
+    <main class="results">
+      <div class="results-header">
+        <div>
+          <h2>Ranked Candidates</h2>
+          <p class="results-subtext">Claude will compare the role against uploaded CV filenames and generate a realistic fit ranking.</p>
+        </div>
+      </div>
+      <div id="resultsPanel" class="placeholder"></div>
+    </main>
+  </div>
+
+  <script>
+    const quickExamples = [
+      "Senior frontend engineer for a SaaS platform using React, TypeScript, design systems, and analytics.",
+      "Product manager with B2B fintech experience, SQL fluency, stakeholder leadership, and experimentation skills.",
+      "Data analyst focused on Python, Power BI, dashboard storytelling, and customer retention insights.",
+      "Customer success lead for enterprise accounts with onboarding, renewals, and cross-functional escalation experience.",
+      "Full-stack engineer with Node.js, APIs, PostgreSQL, cloud deployment, and mentoring responsibilities."
+    ];
+
+    const state = {
+      jobDescription: "",
+      files: [],
+      loading: false,
+      results: []
+    };
+
+    function init() {
+      renderQuickChips();
+      renderFiles();
+      renderResults();
+      updateButtonState();
+    }
+
+    function renderQuickChips() {
+      const chips = document.getElementById("quickChips");
+      chips.innerHTML = quickExamples.map(function(example, index) {
+        return '<button class="chip" type="button" onclick="applyQuickExample(' + index + ')">Example ' + (index + 1) + '</button>';
+      }).join("");
+    }
+
+    function handleJobDescriptionFocus() {
+      toggleQuickChips();
+    }
+
+    function handleJobDescriptionInput() {
+      const textarea = document.getElementById("jobDescription");
+      state.jobDescription = textarea.value.trim();
+      toggleQuickChips();
+      updateButtonState();
+    }
+
+    function toggleQuickChips() {
+      const chips = document.getElementById("quickChips");
+      const textarea = document.getElementById("jobDescription");
+      const shouldShow = document.activeElement === textarea && !textarea.value.trim();
+      chips.classList.toggle("hidden", !shouldShow);
+    }
+
+    function applyQuickExample(index) {
+      const textarea = document.getElementById("jobDescription");
+      textarea.value = quickExamples[index];
+      state.jobDescription = textarea.value.trim();
+      textarea.focus();
+      toggleQuickChips();
+      updateButtonState();
+    }
+
+    function triggerFilePicker() {
+      document.getElementById("fileInput").click();
+    }
+
+    function handleDragEnter(event) {
+      event.preventDefault();
+      document.getElementById("uploadZone").classList.add("active");
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      document.getElementById("uploadZone").classList.add("active");
+    }
+
+    function handleDragLeave(event) {
+      event.preventDefault();
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        document.getElementById("uploadZone").classList.remove("active");
+      }
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      document.getElementById("uploadZone").classList.remove("active");
+      addFiles(Array.from(event.dataTransfer.files || []));
+    }
+
+    function handleFileSelection(event) {
+      addFiles(Array.from(event.target.files || []));
+      event.target.value = "";
+    }
+
+    function addFiles(files) {
+      const allowedExtensions = [".pdf", ".docx", ".txt"];
+      const existingNames = new Set(state.files.map(function(file) { return file.name.toLowerCase(); }));
+
+      files.forEach(function(file) {
+        const fileName = file.name || "";
+        const normalized = fileName.toLowerCase();
+        const isAllowed = allowedExtensions.some(function(ext) {
+          return normalized.endsWith(ext);
+        });
+
+        if (isAllowed && !existingNames.has(normalized)) {
+          state.files.push(file);
+          existingNames.add(normalized);
+        }
+      });
+
+      renderFiles();
+      updateButtonState();
+      setStatus("");
+    }
+
+    function removeFile(index) {
+      state.files.splice(index, 1);
+      renderFiles();
+      updateButtonState();
+    }
+
+    function renderFiles() {
+      const fileList = document.getElementById("fileList");
+
+      if (!state.files.length) {
+        fileList.innerHTML = "";
+        return;
+      }
+
+      fileList.innerHTML = state.files.map(function(file, index) {
+        return [
+          '<div class="file-pill">',
+          '<span title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + '</span>',
+          '<button type="button" aria-label="Remove file" onclick="removeFile(' + index + ')">&times;</button>',
+          '</div>'
+        ].join("");
+      }).join("");
+    }
+
+    function updateButtonState() {
+      const button = document.getElementById("rankButton");
+      button.disabled = state.loading || !state.jobDescription || !state.files.length;
+    }
+
+    function setStatus(message, isError) {
+      const status = document.getElementById("statusMessage");
+      status.textContent = message || "";
+      status.classList.toggle("error", Boolean(isError));
+    }
+
+    function renderResults() {
+      const panel = document.getElementById("resultsPanel");
+
+      if (state.loading) {
+        panel.className = "loading-state";
+        panel.innerHTML = [
+          '<div>',
+          '<div class="dot-loader"><span></span><span></span><span></span></div>',
+          '<h3>Ranking candidates</h3>',
+          '<p>Claude is building a shortlist based on the job description and uploaded filenames.</p>',
+          '</div>'
+        ].join("");
+        return;
+      }
+
+      if (!state.results.length) {
+        panel.className = "placeholder";
+        panel.innerHTML = [
+          '<div class="placeholder-card">',
+          '<div class="stack-icon">CV</div>',
+          '<h3>Shortlist will appear here</h3>',
+          '<p>Add a job description and at least one CV file, then run the ranking to see recruiter-style candidate cards.</p>',
+          '</div>'
+        ].join("");
+        return;
+      }
+
+      panel.className = "";
+      panel.innerHTML = '<div class="cards">' + state.results.map(function(candidate, index) {
+        const rank = index + 1;
+        const score = clampScore(candidate.score);
+        const isTop = rank === 1;
+        return [
+          '<article class="candidate-card' + (isTop ? ' top' : '') + '">',
+          isTop ? '<div class="badge">Top match</div>' : '',
+          '<div class="card-header">',
+          '<div class="candidate-meta">',
+          '<div class="rank-chip">#' + rank + '</div>',
+          '<div class="avatar">' + escapeHtml(getInitials(candidate.name)) + '</div>',
+          '<div>',
+          '<h3 class="candidate-name">' + escapeHtml(candidate.name || "Unnamed Candidate") + '</h3>',
+          '<p class="candidate-file">' + escapeHtml(candidate.file || "Unknown file") + '</p>',
+          '</div>',
+          '</div>',
+          '<div class="score-wrap">',
+          '<div class="score-label">Fit score</div>',
+          '<div class="score-value">' + score + '</div>',
+          '</div>',
+          '</div>',
+          '<div class="score-bar"><div class="score-fill" style="width:' + score + '%"></div></div>',
+          renderTagGroup("Matched skills", candidate.matchedSkills, "match"),
+          renderTagGroup("Gaps", candidate.gaps, "gap"),
+          '<p class="summary">' + escapeHtml(candidate.summary || "No summary provided.") + '</p>',
+          '</article>'
+        ].join("");
+      }).join("") + '</div>';
+    }
+
+    function renderTagGroup(label, items, type) {
+      const safeItems = Array.isArray(items) && items.length ? items : ["None highlighted"];
+      return [
+        '<div class="tag-group">',
+        '<span class="tag-label">' + escapeHtml(label) + '</span>',
+        '<div class="tags">',
+        safeItems.map(function(item) {
+          return '<span class="tag ' + type + '">' + escapeHtml(String(item)) + '</span>';
+        }).join(""),
+        '</div>',
+        '</div>'
+      ].join("");
+    }
+
+    async function rankCandidates() {
+      if (state.loading || !state.jobDescription || !state.files.length) {
+        return;
+      }
+
+      state.loading = true;
+      state.results = [];
+      updateButtonState();
+      renderResults();
+      setStatus("Contacting Claude for candidate ranking...");
+
+      const prompt = [
+        "You are a senior recruiter AI. Given this job description and list of CV filenames, generate realistic candidate profiles and rank them best to worst. Return ONLY a JSON array, no markdown, no preamble. Each object: { name, file, score (0-100), matchedSkills: string[], gaps: string[], summary: string }",
+        "",
+        "Job description:",
+        state.jobDescription,
+        "",
+        "CV filenames:",
+        state.files.map(function(file) {
+          return "- " + file.name;
+        }).join("\n")
+      ].join("\n");
+
+      try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1000,
+            messages: [
+              {
+                role: "user",
+                content: prompt
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("API request failed with status " + response.status + ".");
+        }
+
+        const payload = await response.json();
+        const rawText = extractClaudeText(payload);
+
+        if (!rawText) {
+          throw new Error("The API response did not include any message text.");
+        }
+
+        const parsed = parseCandidateArray(rawText);
+        if (!Array.isArray(parsed)) {
+          throw new Error("Claude did not return a JSON array.");
+        }
+
+        state.results = parsed.map(normalizeCandidate);
+        renderResults();
+        setStatus("Ranking complete. " + state.results.length + " candidate" + (state.results.length === 1 ? "" : "s") + " analyzed.");
+      } catch (error) {
+        renderResults();
+        setStatus(getErrorMessage(error), true);
+      } finally {
+        state.loading = false;
+        updateButtonState();
+        renderResults();
+      }
+    }
+
+    function extractClaudeText(payload) {
+      if (!payload || !Array.isArray(payload.content)) {
+        return "";
+      }
+
+      return payload.content
+        .filter(function(block) {
+          return block && block.type === "text" && typeof block.text === "string";
+        })
+        .map(function(block) {
+          return block.text;
+        })
+        .join("\n")
+        .trim();
+    }
+
+    function normalizeCandidate(candidate) {
+      const normalized = candidate && typeof candidate === "object" ? candidate : {};
+      return {
+        name: String(normalized.name || "Unnamed Candidate"),
+        file: String(normalized.file || "Unknown file"),
+        score: clampScore(normalized.score),
+        matchedSkills: normalizeStringArray(normalized.matchedSkills),
+        gaps: normalizeStringArray(normalized.gaps),
+        summary: String(normalized.summary || "No recruiter summary returned.")
+      };
+    }
+
+    function normalizeStringArray(value) {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value
+        .map(function(item) { return String(item).trim(); })
+        .filter(Boolean);
+    }
+
+    function clampScore(value) {
+      const number = Number(value);
+      if (Number.isNaN(number)) {
+        return 0;
+      }
+      return Math.max(0, Math.min(100, Math.round(number)));
+    }
+
+    function parseCandidateArray(rawText) {
+      try {
+        return JSON.parse(rawText);
+      } catch (directParseError) {
+        const firstBracket = rawText.indexOf("[");
+        const lastBracket = rawText.lastIndexOf("]");
+        if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
+          throw directParseError;
+        }
+        return JSON.parse(rawText.slice(firstBracket, lastBracket + 1));
+      }
+    }
+
+    function getInitials(name) {
+      const parts = String(name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2);
+
+      if (!parts.length) {
+        return "CV";
+      }
+
+      return parts.map(function(part) {
+        return part.charAt(0).toUpperCase();
+      }).join("");
+    }
+
+    function getErrorMessage(error) {
+      if (error && typeof error.message === "string") {
+        return error.message + " If this file is opened directly in a browser, the Anthropic endpoint may also be blocked by CORS or missing environment-level auth injection.";
+      }
+      return "Something went wrong while ranking candidates.";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    document.addEventListener("click", function(event) {
+      const chips = document.getElementById("quickChips");
+      const textarea = document.getElementById("jobDescription");
+      if (!chips.contains(event.target) && event.target !== textarea && !textarea.value.trim()) {
+        chips.classList.add("hidden");
+      }
+    });
+
+    window.applyQuickExample = applyQuickExample;
+    window.handleJobDescriptionFocus = handleJobDescriptionFocus;
+    window.handleJobDescriptionInput = handleJobDescriptionInput;
+    window.triggerFilePicker = triggerFilePicker;
+    window.handleDragEnter = handleDragEnter;
+    window.handleDragOver = handleDragOver;
+    window.handleDragLeave = handleDragLeave;
+    window.handleDrop = handleDrop;
+    window.handleFileSelection = handleFileSelection;
+    window.removeFile = removeFile;
+    window.rankCandidates = rankCandidates;
+
+    init();
+  </script>
+</body>
+</html>

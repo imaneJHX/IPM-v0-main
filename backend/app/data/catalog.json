@@ -1,0 +1,180 @@
+[
+  {
+    "id": "dxc-001",
+    "name": "Assessment Advisor",
+    "description": "Provides a comprehensive evaluation of an organization's data & AI landscape including sources, structure, usage and risks to build strategy, prioritize improvements, and align with business objectives and Data & AI Standards.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Both",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Agentic",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "MVP",
+    "features": [
+      "Maturity assessment",
+      "Gap analysis & prioritized roadmap",
+      "End-to-end data landscape and compliance & ethics alignment check"
+    ],
+    "business_impact": "Accelerates data strategy by revealing high-value assets, gaps, and investment priorities + ensuring organizations are technically, ethically, and operationally prepared to AI",
+    "use_cases": "AI maturity assessment, data strategy evaluation, digital transformation readiness, AI governance audit, data landscape review, compliance alignment, investment prioritization"
+  },
+  {
+    "id": "dxc-002",
+    "name": "Data Health",
+    "description": "Ensures data quality across systems with an end-to-end platform built to give you full control of your data from discovery to action with built-in compliance, automation and intelligence.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Both",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Hybrid",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "MVP",
+    "features": [
+      "Automated rule-based validation",
+      "Real-time monitoring & alerts",
+      "Root-cause diagnostics"
+    ],
+    "business_impact": "Builds trust in analytics and AI by ensuring accurate, complete, and reliable data.",
+    "use_cases": "data quality management, data validation automation, data monitoring, data reliability, data governance, ETL quality control, analytics data trust"
+  },
+  {
+    "id": "dxc-003",
+    "name": "Intelligent Analytics",
+    "description": "Transforms raw data into actionable insights using ML, NLP and advanced statistical models, enabling proactive decision-making, uncovering hidden patterns in real time and explains results contextually.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Both",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Hybrid",
+    "ai_criticality": "AI Core",
+    "data_sensitivity": "High",
+    "value_layer": "Analytics",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "MVP",
+    "features": [
+      "Real-time insight generation",
+      "Explainable ML-driven forecasts",
+      "Self-service dashboards with governance"
+    ],
+    "business_impact": "Enables faster, confident decisions by turning complex data into trusted, actionable intelligence.",
+    "use_cases": "business intelligence, predictive analytics, real-time reporting, ML-driven forecasting, self-service analytics, KPI dashboards, data-driven decisions"
+  },
+  {
+    "id": "dxc-004",
+    "name": "ROI Simulator",
+    "description": "Measures and communicates the business value of data and AI investments in financial and operational terms.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Both",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Agentic",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "MVP",
+    "features": [
+      "Customizable financial models per initiative",
+      "Scenario comparison & sensitivity analysis"
+    ],
+    "business_impact": "Strengthens investment decisions by quantifying expected value and eliminating AI/data risk initiatives.",
+    "use_cases": "AI investment ROI calculation, business case simulation, cost-benefit analysis, financial modeling, AI project justification, value quantification"
+  },
+  {
+    "id": "dxc-005",
+    "name": "AO Handler",
+    "description": "An intelligent solution that discovers relevant public and private calls for tenders, evaluates eligibility based on predefined rules, and auto-generates compliant, tailored proposal drafts, accelerating bid cycles, reducing manual effort, and increasing win rates.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Internal",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Agentic",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "Prototype",
+    "features": [
+      "Automated tender discovery & filtering",
+      "Rule-based eligibility check",
+      "AI-generated compliant proposal drafts"
+    ],
+    "business_impact": "Increases capacity and win rates while cutting response time and manual effort.",
+    "use_cases": "tender management, bid automation, proposal generation, call for tender response, RFP automation, procurement automation, eligibility screening"
+  },
+  {
+    "id": "dxc-006",
+    "name": "AI Use Case Radar",
+    "description": "A cross-industry intelligence tool that scans and prioritizes emerging AI trends and use cases to benchmark innovation and align strategy.",
+    "industry_focus": "Cross-industry",
+    "features": [],
+    "use_cases": "AI trend scanning, use case prioritization, innovation benchmarking, AI opportunity identification, emerging technology radar"
+  },
+  {
+    "id": "dxc-007",
+    "name": "AI Implementation Framework",
+    "description": "Provides a scalable, responsible, and business-aligned approach to developing, deploying, and monitoring AI/ML solutions.",
+    "industry_focus": "Cross-industry",
+    "features": [],
+    "use_cases": "AI deployment methodology, responsible AI, MLOps framework, AI project governance, model monitoring, AI scaling"
+  },
+  {
+    "id": "dxc-009",
+    "name": "HR Assistant",
+    "description": "A Conversational AI Assistant designed to interact naturally with users, understand intent, provide relevant responses, execute predefined tasks across multiple platforms and channels.",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Generative AI",
+    "ai_criticality": "AI Core",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "maturity_level": "Pilot",
+    "features": [
+      "Manages user inquiries",
+      "Integration with existing systems and sources (ERP, CRM, Databases)",
+      "Improves responses based on context"
+    ],
+    "business_impact": "Enables natural, intelligent interaction with enterprise systems, reducing manual effort and improving employee experience.",
+    "use_cases": "HR automation, recruitment process automation, CV triage, resume screening, candidate shortlisting, talent acquisition, hiring workflows, employee onboarding, leave requests, payroll inquiries, HR policy Q&A, people management automation"
+  },
+  {
+    "id": "dxc-011",
+    "name": "AI Workbench",
+    "description": "A modular architecture designed to build, manage, and scale agent-based AI systems powered by LLMs. Enables users to interact with intelligent agents through a unified interface while allowing developers to integrate external tools, models, and services through MCP.",
+    "internal_external": "External",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Generative AI",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Orchestration",
+    "maturity_level": "Pilot",
+    "features": [
+      "Agent-based AI system",
+      "Modular integration with LLM providers",
+      "MCP server ecosystem for tool extensions"
+    ],
+    "business_impact": "Enables automation of complex tasks, rapid deployment of specialized AI agents, and integration with existing enterprise tools and data sources.",
+    "use_cases": "AI agent development, LLM orchestration, multi-agent systems, enterprise AI platform, MCP tool integration, custom AI assistant building, agentic workflow automation"
+  },
+  {
+    "id": "dxc-012",
+    "name": "AI CV Sorter",
+    "description": "An AI-assisted recruitment screening solution that ranks candidates against a job description, summarizes fit, highlights matched skills and gaps, and helps recruiters accelerate shortlisting decisions.",
+    "ipm_stage": "Delivery",
+    "internal_external": "Internal",
+    "industry_focus": "Cross-industry",
+    "ai_type": "Generative AI",
+    "ai_criticality": "AI Enhanced",
+    "data_sensitivity": "High",
+    "value_layer": "Intelligence",
+    "monetization_potential": "Billable Accelerator",
+    "maturity_level": "Prototype",
+    "features": [
+      "Job description to CV fit ranking",
+      "Candidate scoring with recruiter summaries",
+      "Matched skills and gap highlighting"
+    ],
+    "business_impact": "Reduces manual screening time, improves shortlist consistency, and helps talent teams focus faster on the most relevant candidates.",
+    "use_cases": "CV triage, resume screening, candidate ranking, candidate shortlisting, recruitment automation, hiring workflow optimization, talent acquisition, applicant screening, recruiter copilot"
+  }
+]
