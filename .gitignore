@@ -11,7 +11,9 @@ __pycache__/
 dist/
 build/
 .venv/
+.venv-backend/
 venv/
+*.pyc
 *.egg
 
 # Node
@@ -39,6 +41,9 @@ minio_data/
 
 # Alembic
 alembic/versions/__pycache__/
+
+# Local dashboard run logs
+streamlit-dev*.log
 
 # Claude
 CLAUDE.md
