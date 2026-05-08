@@ -43,7 +43,7 @@ minio_data/
 alembic/versions/__pycache__/
 
 # Local dashboard run logs
-streamlit-dev*.log
+streamlit-*.log
 
 # Claude
 CLAUDE.md
