@@ -1,3 +1,3 @@
-"""Vercel Python entrypoint for the FastAPI backend."""
+"""Vercel-compatible FastAPI entrypoint for the backend folder."""
 
 from app.main import app

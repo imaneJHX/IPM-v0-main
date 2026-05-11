@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.py": {
+      "excludeFiles": "{streamlit_app.py,streamlit-*.log,ai-cv-sorter.html,__pycache__/**,.venv-backend/**,.dist/**,backend/ipm-local.db,backend/tests/**,frontend/**}"
+    }
+  },
   "builds": [
     {
       "src": "frontend/package.json",

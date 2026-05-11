@@ -1,0 +1,10 @@
+[project]
+name = "ipm-v0-main"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+app = "api.index:app"
+
+[tool.vercel]
+entrypoint = "api/index.py"
