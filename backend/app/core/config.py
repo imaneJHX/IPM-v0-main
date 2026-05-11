@@ -1,5 +1,6 @@
 """Pydantic Settings — all environment variables for the IPM backend."""
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -51,6 +52,14 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
     ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        """Accept JSON arrays or comma-separated strings from hosting env vars."""
+        if isinstance(value, str) and not value.strip().startswith("["):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

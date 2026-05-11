@@ -1,0 +1,9 @@
+streamlit_app.py
+streamlit-*.log
+ai-cv-sorter.html
+__pycache__/
+.venv-backend/
+.dist/
+backend/ipm-local.db
+backend/backend-dev*.log
+frontend/frontend-dev*.log

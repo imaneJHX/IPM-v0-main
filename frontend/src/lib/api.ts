@@ -4,7 +4,7 @@
 
 import type { AnalyzeRequest, AnalyzeResponse, BusinessNeed, CatalogProduct, CatalogSearchResponse, CreateNeedRequest, ExportReportRequest, GapAnalysisFeedbackRequest, GapAnalysisFeedbackResponse, GapAnalysisResponse, RecommendationsRequest, RecommendationsResponse, StageGateInteractionRequest, StageGateInteractionResponse, TechSignalsResponse, UpdateStatusRequest } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${path}`;
