@@ -6,12 +6,14 @@ Sample data remains available as a fallback for demos and disconnected deploys.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from html import escape
 import json
 import os
 from pathlib import Path
 from random import Random
+import tomllib
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -24,11 +26,26 @@ from streamlit_autorefresh import st_autorefresh
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-LOCAL_DEFAULT_API_URL = "http://localhost:8000"
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    """Runtime configuration for local and Streamlit Cloud deployments."""
+
+    api_url: str
+    source: str
+
+    @property
+    def has_backend(self) -> bool:
+        return bool(self.api_url)
 
 
 def load_local_env() -> None:
-    """Load simple KEY=VALUE pairs from .env for local Streamlit runs."""
+    """Load simple KEY=VALUE pairs from .env for local Streamlit runs.
+
+    Streamlit Community Cloud should use app secrets instead. The real .env file
+    is ignored by Git, so this is safe for local developer machines.
+    """
 
     env_path = PROJECT_ROOT / ".env"
     if not env_path.exists():
@@ -45,17 +62,55 @@ def load_local_env() -> None:
             os.environ[key] = value
 
 
-def get_secret_or_env(name: str) -> str:
-    """Read configuration from Streamlit secrets first, then environment."""
+def read_toml_secret(name: str) -> str:
+    """Read a root-level Streamlit secret without touching st.secrets.
 
-    try:
-        secret_value = st.secrets.get(name, "")
-    except Exception:
-        secret_value = ""
-    return str(secret_value or os.getenv(name) or "").strip()
+    Accessing st.secrets when no secrets are configured can render "No secrets
+    found" in the app. Reading the optional TOML files directly keeps missing
+    secrets quiet while still supporting local .streamlit/secrets.toml and the
+    standard user-level Streamlit secrets location.
+    """
+
+    secret_paths = [
+        PROJECT_ROOT / ".streamlit" / "secrets.toml",
+        Path.home() / ".streamlit" / "secrets.toml",
+    ]
+    for secret_path in secret_paths:
+        if not secret_path.exists():
+            continue
+        try:
+            payload = tomllib.loads(secret_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        value = payload.get(name, "")
+        if value:
+            return str(value).strip()
+    return ""
+
+
+def get_config_value(name: str) -> tuple[str, str]:
+    """Read config from environment first, then optional secrets.toml files."""
+
+    env_value = os.getenv(name, "").strip()
+    if env_value:
+        return env_value, "environment"
+
+    secret_value = read_toml_secret(name)
+    if secret_value:
+        return secret_value, "secrets.toml"
+
+    return "", "demo"
+
+
+def load_app_config() -> AppConfig:
+    """Build app config for local development and Streamlit Community Cloud."""
+
+    api_url, source = get_config_value("IPM_API_URL")
+    return AppConfig(api_url=api_url.rstrip("/"), source=source)
 
 
 load_local_env()
+APP_CONFIG = load_app_config()
 
 
 # ---------------------------------------------------------------------------
@@ -455,9 +510,9 @@ DASHBOARD_COLUMNS = [
 
 
 def get_default_api_url() -> str:
-    """Read the backend URL from Streamlit secrets, .env, or local default."""
+    """Return the configured backend URL, or blank when demo mode is active."""
 
-    return (get_secret_or_env("IPM_API_URL") or LOCAL_DEFAULT_API_URL).rstrip("/")
+    return APP_CONFIG.api_url
 
 
 def make_api_url(base_url: str, path: str) -> str:
@@ -894,28 +949,37 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 st.sidebar.markdown("### Backend")
-configured_api_url = get_secret_or_env("IPM_API_URL")
 api_url = st.sidebar.text_input(
     "FastAPI URL",
     value=api_url,
+    placeholder="https://your-backend-url.com",
     help="Use your deployed backend URL, for example https://your-api.vercel.app.",
 )
 use_sample_data = st.sidebar.toggle(
     "Use sample data",
-    value=False,
+    value=not bool(api_url),
     help="Turn on demo data when the backend is not available.",
 )
 if st.sidebar.button("Refresh backend data", use_container_width=True):
     load_backend_needs.clear()
 
-if not configured_api_url and api_url.rstrip("/") == LOCAL_DEFAULT_API_URL:
+api_url = api_url.rstrip("/")
+
+if not api_url:
     st.sidebar.info(
-        "IPM_API_URL is not set. Using localhost for local development. "
-        "On Streamlit Community Cloud, add IPM_API_URL in app secrets."
+        "Demo mode is active. Add IPM_API_URL in Streamlit secrets or .env to connect live backend data."
+    )
+elif APP_CONFIG.source != "demo":
+    st.sidebar.info(
+        f"Backend URL loaded from {APP_CONFIG.source}."
     )
 
-backend_df, backend_error = load_backend_needs(api_url)
-using_backend = not use_sample_data and backend_error is None
+if api_url and not use_sample_data:
+    backend_df, backend_error = load_backend_needs(api_url)
+else:
+    backend_df, backend_error = pd.DataFrame(), None
+
+using_backend = bool(api_url) and not use_sample_data and backend_error is None
 if using_backend:
     df = backend_df
     trend_df = build_trend_data_from_needs(df)
@@ -924,7 +988,7 @@ else:
     trend_df = load_sample_trend_data()
 
 if backend_error and not use_sample_data:
-    st.sidebar.warning(f"Backend unavailable. Showing sample data. Details: {backend_error}")
+    st.sidebar.warning("Backend unavailable. Showing demo data for now.")
 
 with st.sidebar.expander("Create need", expanded=False):
     with st.form("create_need_form", clear_on_submit=True):
@@ -937,8 +1001,10 @@ with st.sidebar.expander("Create need", expanded=False):
         submitted = st.form_submit_button("Submit to backend", use_container_width=True)
 
     if submitted:
-        if len(pitch.strip()) < 20:
-            st.error("Pitch must be at least 20 characters.")
+        if not api_url:
+            st.info("Add IPM_API_URL to submit business needs to the backend.")
+        elif len(pitch.strip()) < 20:
+            st.warning("Pitch must be at least 20 characters.")
         else:
             try:
                 api_json_request(
@@ -950,7 +1016,7 @@ with st.sidebar.expander("Create need", expanded=False):
                 st.success("Need created in the backend.")
                 st.rerun()
             except Exception as exc:
-                st.error(f"Could not create need: {exc}")
+                st.warning(f"Could not create need. Please check the backend URL. Details: {exc}")
 
 st.sidebar.markdown("### Portfolio Filters")
 
