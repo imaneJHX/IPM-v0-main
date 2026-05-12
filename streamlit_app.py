@@ -13,9 +13,13 @@ import json
 import os
 from pathlib import Path
 from random import Random
-import tomllib
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 on Streamlit Cloud
+    import tomli as tomllib
 
 import pandas as pd
 import plotly.express as px
