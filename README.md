@@ -237,8 +237,10 @@ streamlit_app.py
 IPM_API_URL = "https://your-deployed-backend-url"
 ```
 
-6. In **Advanced settings**, choose Python `3.12`. Streamlit Community Cloud
-defaults to Python 3.12 and does not use `runtime.txt` for Python selection.
+6. In **Advanced settings**, choose Python `3.11` or `3.12`. Do not deploy
+with Python `3.14`; packages such as pandas and Pillow may build from source
+and fail. Streamlit Community Cloud Python selection is controlled from the app
+settings, and `runtime.txt` may be ignored.
 
 Backend API keys such as `GROQ_API_KEY`, `OPENAI_API_KEY`, and `TAVILY_API_KEY`
 belong in the backend deployment environment, not in the Streamlit app, unless

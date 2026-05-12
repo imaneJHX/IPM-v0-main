@@ -1,6 +1,8 @@
 # Streamlit Community Cloud: select Python 3.12 in Advanced settings.
-# Only external packages imported by streamlit_app.py are listed here.
+# Only Streamlit runtime dependencies are listed here.
 streamlit==1.38.0
 pandas==2.2.3
+pillow==10.4.0
 plotly==5.24.1
+requests==2.32.3
 streamlit-autorefresh==1.0.1
