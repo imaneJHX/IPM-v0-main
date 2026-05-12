@@ -163,6 +163,87 @@ npm install
 npm run dev
 ```
 
+### Streamlit Dashboard
+
+The Streamlit dashboard entrypoint is [streamlit_app.py](streamlit_app.py). It
+can read live business needs from the FastAPI backend and falls back to sample
+data when the backend is not reachable, so it works both locally and online.
+
+Install the Streamlit dependencies from the repository root:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the dashboard:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+For local live backend data, start the FastAPI backend and set `IPM_API_URL`.
+You can put this in a local `.env` file:
+
+```env
+IPM_API_URL=http://localhost:8000
+```
+
+Then run:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The app reads configuration in this order:
+- Streamlit Community Cloud secrets
+- Local `.env` or environment variables
+- Local default `http://localhost:8000`
+
+If `IPM_API_URL` is missing or the backend cannot be reached, the app shows a
+clear sidebar message and uses sample dashboard data.
+
+### Push To GitHub
+
+From the repository root:
+
+```bash
+git status
+git add streamlit_app.py requirements.txt README.md .env.example .gitignore .streamlit/secrets.toml.example
+git commit -m "Prepare Streamlit Community Cloud deployment"
+git branch -M main
+git remote add origin https://github.com/<your-user>/<your-repo>.git
+git push -u origin main
+```
+
+If the GitHub remote already exists, skip the `git remote add origin ...` line.
+
+Do not commit real `.env` or `.streamlit/secrets.toml` files. They are ignored
+by Git.
+
+### Deploy On Streamlit Community Cloud
+
+1. Push this repository to GitHub.
+2. Go to `https://share.streamlit.io` in your browser.
+3. Choose **New app** and select your GitHub repository.
+4. Set the main file path to:
+
+```text
+streamlit_app.py
+```
+
+5. In **Advanced settings** or **Secrets**, add:
+
+```toml
+IPM_API_URL = "https://your-deployed-backend-url"
+```
+
+6. In **Advanced settings**, choose Python `3.12`. Streamlit Community Cloud
+defaults to Python 3.12 and does not use `runtime.txt` for Python selection.
+
+Backend API keys such as `GROQ_API_KEY`, `OPENAI_API_KEY`, and `TAVILY_API_KEY`
+belong in the backend deployment environment, not in the Streamlit app, unless
+you later add direct API calls from Streamlit.
+
 ## Environment Variables
 
 The backend reads its settings from `.env`.
@@ -188,6 +269,7 @@ The backend reads its settings from `.env`.
 | `LANGFUSE_HOST` | Langfuse host |
 | `TAVILY_API_KEY` | Tech signals search API key |
 | `NEXT_PUBLIC_API_URL` | Frontend API base URL |
+| `IPM_API_URL` | Streamlit dashboard backend URL |
 
 ## Key Files
 

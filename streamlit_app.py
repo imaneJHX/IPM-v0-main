@@ -1,14 +1,19 @@
-"""IPM Flow real-time dashboard.
+"""Streamlit dashboard for business needs progress tracking.
 
-This Streamlit app uses sample data so it can run locally or on Streamlit
-Community Cloud before the backend integration is connected.
+This Streamlit app connects to the IPM FastAPI backend when IPM_API_URL is set.
+Sample data remains available as a fallback for demos and disconnected deploys.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 from html import escape
+import json
+import os
+from pathlib import Path
 from random import Random
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import pandas as pd
 import plotly.express as px
@@ -18,11 +23,46 @@ from plotly.subplots import make_subplots
 from streamlit_autorefresh import st_autorefresh
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+LOCAL_DEFAULT_API_URL = "http://localhost:8000"
+
+
+def load_local_env() -> None:
+    """Load simple KEY=VALUE pairs from .env for local Streamlit runs."""
+
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def get_secret_or_env(name: str) -> str:
+    """Read configuration from Streamlit secrets first, then environment."""
+
+    try:
+        secret_value = st.secrets.get(name, "")
+    except Exception:
+        secret_value = ""
+    return str(secret_value or os.getenv(name) or "").strip()
+
+
+load_local_env()
+
+
 # ---------------------------------------------------------------------------
 # Page configuration
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="IPM Flow Real-Time Dashboard",
+    page_title="Streamlit Dashboard — Business Needs Progress Tracking",
     page_icon="IPM",
     layout="wide",
 )
@@ -358,8 +398,225 @@ st.markdown(
 
 
 # ---------------------------------------------------------------------------
-# Sample data generation
+# Backend integration and sample data generation
 # ---------------------------------------------------------------------------
+STATUS_TO_PHASE = {
+    "draft": "Sourcing",
+    "submitted": "Sourcing",
+    "in_qualification": "Qualification",
+    "in_selection": "Qualification",
+    "delivery": "Delivery",
+    "export_ready": "Delivery",
+    "abandoned": "Sourcing",
+}
+
+STATUS_TO_GATE = {
+    "draft": "REWORK",
+    "submitted": "GO",
+    "in_qualification": "GO",
+    "in_selection": "GO",
+    "delivery": "GO",
+    "export_ready": "GO",
+    "abandoned": "ABANDON",
+}
+
+STATUS_TO_RECOMMENDATION = {
+    "draft": "Needs sourcing validation",
+    "submitted": "Ready for qualification",
+    "in_qualification": "Assessment in progress",
+    "in_selection": "Ready for selection",
+    "delivery": "Prepare delivery recommendations",
+    "export_ready": "Ready for export",
+    "abandoned": "Not active",
+}
+
+HORIZON_RISK = {
+    "court_terme": "Medium",
+    "moyen_terme": "Low",
+    "long_terme": "Medium",
+}
+
+HORIZON_OPTIONS = {
+    "Short term": "court_terme",
+    "Medium term": "moyen_terme",
+    "Long term": "long_terme",
+}
+
+DASHBOARD_COLUMNS = [
+    "Initiative ID",
+    "Title",
+    "Phase",
+    "Stage Gate",
+    "IVI Score",
+    "Risk Level",
+    "Recommendation Status",
+    "Last Update",
+]
+
+
+def get_default_api_url() -> str:
+    """Read the backend URL from Streamlit secrets, .env, or local default."""
+
+    return (get_secret_or_env("IPM_API_URL") or LOCAL_DEFAULT_API_URL).rstrip("/")
+
+
+def make_api_url(base_url: str, path: str) -> str:
+    """Build an API URL while accepting either root or /api/v1 base URLs."""
+
+    normalized_base = base_url.rstrip("/")
+    if normalized_base.endswith("/api/v1"):
+        return f"{normalized_base}{path}"
+    return f"{normalized_base}/api/v1{path}"
+
+
+def api_json_request(url: str, method: str = "GET", payload: dict | None = None) -> object:
+    """Call the backend with only standard-library HTTP support."""
+
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = Request(
+        url,
+        data=body,
+        method=method,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=12) as response:
+            response_body = response.read().decode("utf-8")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"{exc.code} {exc.reason}: {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(str(exc.reason)) from exc
+
+    return json.loads(response_body) if response_body else {}
+
+
+def score_need(row: dict) -> float:
+    """Create a compact dashboard score from status, tags, and duplicate risk."""
+
+    status_scores = {
+        "draft": 2.5,
+        "submitted": 3.2,
+        "in_qualification": 3.7,
+        "in_selection": 4.0,
+        "delivery": 4.4,
+        "export_ready": 4.7,
+        "abandoned": 1.4,
+    }
+    score = status_scores.get(row.get("status"), 3.0)
+    tags = row.get("tags") or {}
+    if tags.get("horizon_conflict"):
+        score -= 0.35
+    if row.get("duplicate_matches"):
+        score -= 0.2
+    return round(max(1.0, min(5.0, score)), 2)
+
+
+def risk_for_need(row: dict) -> str:
+    """Estimate risk from current status, horizon, duplicate matches, and tag signals."""
+
+    status = row.get("status")
+    tags = row.get("tags") or {}
+    if status == "abandoned":
+        return "High"
+    if tags.get("horizon_conflict") or row.get("duplicate_matches"):
+        return "High"
+    return HORIZON_RISK.get(row.get("horizon"), "Medium")
+
+
+def need_title(pitch: str) -> str:
+    """Use the first sentence as a readable dashboard title."""
+
+    title = " ".join((pitch or "").strip().split())
+    if not title:
+        return "Untitled business need"
+    first_sentence = title.split(".")[0]
+    return first_sentence[:82] + ("..." if len(first_sentence) > 82 else "")
+
+
+def needs_to_dashboard_rows(needs: list[dict]) -> pd.DataFrame:
+    """Map backend BusinessNeedResponse objects into dashboard table rows."""
+
+    rows = []
+    for need in needs:
+        status = need.get("status", "draft")
+        updated_at = need.get("updated_at") or need.get("created_at") or ""
+        rows.append(
+            {
+                "Initiative ID": need.get("id", "IPM-UNKNOWN"),
+                "Title": need_title(need.get("pitch", "")),
+                "Phase": STATUS_TO_PHASE.get(status, "Sourcing"),
+                "Stage Gate": STATUS_TO_GATE.get(status, "REWORK"),
+                "IVI Score": score_need(need),
+                "Risk Level": risk_for_need(need),
+                "Recommendation Status": STATUS_TO_RECOMMENDATION.get(status, "Needs review"),
+                "Last Update": pd.to_datetime(updated_at, errors="coerce").strftime("%Y-%m-%d %H:%M")
+                if updated_at
+                else datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+
+    return pd.DataFrame(rows, columns=DASHBOARD_COLUMNS)
+
+
+def build_trend_data_from_needs(df: pd.DataFrame) -> pd.DataFrame:
+    """Build a lightweight recent trend view from backend initiative timestamps."""
+
+    if df.empty:
+        return load_sample_trend_data()
+
+    dated = df.copy()
+    dated["Last Update Date"] = pd.to_datetime(dated["Last Update"], errors="coerce")
+    dated = dated.dropna(subset=["Last Update Date"])
+    if dated.empty:
+        return load_sample_trend_data()
+
+    start_date = datetime.now().date() - timedelta(weeks=11)
+    rows = []
+    for week_index in range(12):
+        week_start = start_date + timedelta(weeks=week_index)
+        week_end = week_start + timedelta(days=7)
+        through_week = dated[dated["Last Update Date"].dt.date < week_end]
+        in_week = dated[
+            (dated["Last Update Date"].dt.date >= week_start)
+            & (dated["Last Update Date"].dt.date < week_end)
+        ]
+        if through_week.empty:
+            average_ivi = 0.0
+        else:
+            average_ivi = round(float(through_week["IVI Score"].mean()), 2)
+        rows.append(
+            {
+                "Week": week_start.strftime("%Y-%m-%d"),
+                "Submitted initiatives": int(len(through_week)),
+                "Qualified initiatives": int(through_week["Phase"].isin(["Qualification", "Delivery"]).sum()),
+                "Delivery-ready initiatives": int((through_week["Phase"] == "Delivery").sum()),
+                "High-risk initiatives": int((through_week["Risk Level"] == "High").sum()),
+                "Average IVI score": average_ivi,
+                "GO": int((in_week["Stage Gate"] == "GO").sum()),
+                "REWORK": int((in_week["Stage Gate"] == "REWORK").sum()),
+                "ABANDON": int((in_week["Stage Gate"] == "ABANDON").sum()),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(ttl=10, show_spinner=False)
+def load_backend_needs(api_url: str) -> tuple[pd.DataFrame, str | None]:
+    """Fetch business needs from the FastAPI backend."""
+
+    try:
+        payload = api_json_request(make_api_url(api_url, "/needs"))
+    except Exception as exc:
+        return pd.DataFrame(), str(exc)
+
+    return needs_to_dashboard_rows(payload if isinstance(payload, list) else []), None
+
+
 @st.cache_data(ttl=5)
 def load_sample_initiatives(refresh_tick: int) -> pd.DataFrame:
     """Create realistic fake innovation initiatives for the dashboard.
@@ -541,8 +798,7 @@ def load_sample_trend_data() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-df = load_sample_initiatives(refresh_count)
-trend_df = load_sample_trend_data()
+api_url = get_default_api_url()
 
 
 # ---------------------------------------------------------------------------
@@ -629,7 +885,7 @@ st.sidebar.markdown(
     """
     <div class="ipm-sidebar-brand">
         <div class="ipm-sidebar-title">IPM Flow</div>
-        <div class="ipm-sidebar-subtitle">Innovation Monitoring</div>
+        <div class="ipm-sidebar-subtitle">Business Needs Progress Tracking</div>
         <div class="ipm-sidebar-caption">
             Monitor initiatives across Sourcing, Qualification, and Delivery.
         </div>
@@ -637,6 +893,65 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.sidebar.markdown("### Backend")
+configured_api_url = get_secret_or_env("IPM_API_URL")
+api_url = st.sidebar.text_input(
+    "FastAPI URL",
+    value=api_url,
+    help="Use your deployed backend URL, for example https://your-api.vercel.app.",
+)
+use_sample_data = st.sidebar.toggle(
+    "Use sample data",
+    value=False,
+    help="Turn on demo data when the backend is not available.",
+)
+if st.sidebar.button("Refresh backend data", use_container_width=True):
+    load_backend_needs.clear()
+
+if not configured_api_url and api_url.rstrip("/") == LOCAL_DEFAULT_API_URL:
+    st.sidebar.info(
+        "IPM_API_URL is not set. Using localhost for local development. "
+        "On Streamlit Community Cloud, add IPM_API_URL in app secrets."
+    )
+
+backend_df, backend_error = load_backend_needs(api_url)
+using_backend = not use_sample_data and backend_error is None
+if using_backend:
+    df = backend_df
+    trend_df = build_trend_data_from_needs(df)
+else:
+    df = load_sample_initiatives(refresh_count)
+    trend_df = load_sample_trend_data()
+
+if backend_error and not use_sample_data:
+    st.sidebar.warning(f"Backend unavailable. Showing sample data. Details: {backend_error}")
+
+with st.sidebar.expander("Create need", expanded=False):
+    with st.form("create_need_form", clear_on_submit=True):
+        pitch = st.text_area(
+            "Pitch",
+            height=120,
+            placeholder="Describe the business need, expected value, and context.",
+        )
+        horizon_label = st.selectbox("Horizon", options=list(HORIZON_OPTIONS.keys()), index=1)
+        submitted = st.form_submit_button("Submit to backend", use_container_width=True)
+
+    if submitted:
+        if len(pitch.strip()) < 20:
+            st.error("Pitch must be at least 20 characters.")
+        else:
+            try:
+                api_json_request(
+                    make_api_url(api_url, "/needs"),
+                    method="POST",
+                    payload={"pitch": pitch, "horizon": HORIZON_OPTIONS[horizon_label]},
+                )
+                load_backend_needs.clear()
+                st.success("Need created in the backend.")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Could not create need: {exc}")
+
 st.sidebar.markdown("### Portfolio Filters")
 
 selected_phases = st.sidebar.multiselect(
@@ -669,7 +984,7 @@ st.markdown(
     """
     <div class="ipm-hero">
         <div class="ipm-badge">Innovation Process Model</div>
-        <h1>IPM Flow Real-Time Dashboard</h1>
+        <h1>Streamlit Dashboard — Business Needs Progress Tracking</h1>
         <p>AI-powered innovation assessment and PoC readiness monitoring</p>
     </div>
     """,
@@ -682,7 +997,7 @@ st.markdown(
         <div>
             <strong>Live portfolio monitor</strong><br>
             <span class="ipm-live-label">
-                Sample data refreshes every {REFRESH_INTERVAL_MS // 1000} seconds for real-time dashboard behavior.
+                {"Connected to " + escape(api_url) if using_backend else "Sample data refreshes every " + str(REFRESH_INTERVAL_MS // 1000) + " seconds for demo behavior."}
             </span>
         </div>
         <div>
@@ -961,19 +1276,8 @@ render_section_title(
     "Detailed operational view for Stage Gate tracking, recommendations, and PoC preparation.",
 )
 
-display_columns = [
-    "Initiative ID",
-    "Title",
-    "Phase",
-    "Stage Gate",
-    "IVI Score",
-    "Risk Level",
-    "Recommendation Status",
-    "Last Update",
-]
-
 st.dataframe(
-    filtered_df[display_columns],
+    filtered_df[DASHBOARD_COLUMNS],
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -996,10 +1300,9 @@ st.dataframe(
 # Footer note for deployment and backend integration
 # ---------------------------------------------------------------------------
 st.markdown(
-    """
+    f"""
     <div class="ipm-footer">
-        Prototype dashboard using sample data. For production, replace the sample data loader
-        with API calls to the IPM Flow backend.
+        {"Connected to the IPM Flow backend at " + escape(api_url) + "." if using_backend else "Running with sample data. Set IPM_API_URL or enter a FastAPI URL in the sidebar to connect live data."}
     </div>
     """,
     unsafe_allow_html=True,
